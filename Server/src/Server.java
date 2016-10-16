@@ -7,6 +7,15 @@ public class Server {
 		
 	public static void main(String[] args) {
 		
+		//Get the path and serverID data from command line	
+		ArgsReader.read(args);
+		path = ArgsReader.getPath();
+		serverID = ArgsReader.getServerID();
+			
+		//Read the config file to get all the server info		
+		ConfigReader configReader = new ConfigReader();
+		configReader.read(serverID, path);
+		
 		//Specify the keystore details (this can be specified as VM arguments as well)
 		//the keystore file contains an application's own certificate and private key
 		//keytool -genkey -keystore <keystorename> -keyalg RSA
@@ -17,19 +26,14 @@ public class Server {
 		// Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
 		System.setProperty("javax.net.debug","all");
 		
-		//Get the path and serverID data from command line	
-		ArgsReader.read(args);
-		path = ArgsReader.getPath();
-		serverID = ArgsReader.getServerID();
-			
-		//Read the config file to get all the server info		
-		ConfigReader configReader = new ConfigReader();
-		configReader.read(serverID, path);
+
 		
 		/*
 		 * After reading the config file, set up two listening thread
 		 * One for client port and one for server port
 		 */
+		
+		
 			
 		try {
 			//Create serversocket for client port
