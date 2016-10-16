@@ -1,10 +1,13 @@
 package au.edu.unimelb.tcp.client;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.Socket;
+import java.io.OutputStreamWriter;
+
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -13,7 +16,7 @@ import org.json.simple.parser.ParseException;
 
 public class MessageReceiveThread implements Runnable {
 
-	private Socket socket;
+	private SSLSocket socket;
 	private State state;
 	private boolean debug;
 
@@ -24,17 +27,21 @@ public class MessageReceiveThread implements Runnable {
 	private boolean run = true;
 	
 	private MessageSendThread messageSendThread;
+	
+	private SSLSocketFactory sslsocketfactory;
 
-	public MessageReceiveThread(Socket socket, State state, MessageSendThread messageSendThread, boolean debug) throws IOException {
+	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug) throws IOException {
 		this.socket = socket;
 		this.state = state;
 		this.messageSendThread = messageSendThread;
 		this.debug = debug;
+		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+		
 	}
 
 	@Override
 	public void run() {
-
+		
 		try {
 			this.in = new BufferedReader(new InputStreamReader(
 					socket.getInputStream(), "UTF-8"));
@@ -60,7 +67,7 @@ public class MessageReceiveThread implements Runnable {
 
 	}
 
-	public void MessageReceive(Socket socket, JSONObject message)
+	public void MessageReceive(SSLSocket socket, JSONObject message)
 			throws IOException, ParseException {
 		String type = (String) message.get("type");
 		
@@ -198,10 +205,12 @@ public class MessageReceiveThread implements Runnable {
 				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			}
 			
-			Socket temp_socket = new Socket(host, port);
+			//Socket temp_socket = new Socket(host, port);
+			SSLSocket temp_socket = (SSLSocket) sslsocketfactory.createSocket(host, port);
 			
 			// send #movejoin
-			DataOutputStream out = new DataOutputStream(temp_socket.getOutputStream());
+			//BufferedWriter out = new DataOutputStream(temp_socket.getOutputStream());
+			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(temp_socket.getOutputStream()));
 			JSONObject request = ClientMessages.getMoveJoinRequest(state.getIdentity(), state.getRoomId(), temp_room);
 			if (debug) {
 				System.out.println("Sending: " + request.toJSONString());
@@ -243,15 +252,15 @@ public class MessageReceiveThread implements Runnable {
 		}
 	}
 	
-	public void switchServer(Socket temp_socket, BufferedReader temp_in) throws IOException {
+	public void switchServer(SSLSocket temp_socket, BufferedReader temp_in) throws IOException {
 		in.close();
 		in = temp_in;
 		socket.close();
 		socket = temp_socket;
 	}
 
-	private void send(DataOutputStream out, JSONObject obj) throws IOException {
-		out.write((obj.toJSONString() + "\n").getBytes("UTF-8"));
+	private void send(BufferedWriter out, JSONObject obj) throws IOException {
+		out.write((obj.toJSONString() + "\n"));
 		out.flush();
 	}
 }

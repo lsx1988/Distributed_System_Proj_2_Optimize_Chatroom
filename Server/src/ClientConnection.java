@@ -36,7 +36,7 @@ public class ClientConnection extends Thread {
 			BufferedReader clientBR = new BufferedReader(
 											new InputStreamReader(
 												client.getInputStream(),"UTF-8"));
-			//keep listening to client input
+			//keep listening to client input			
 			while(client.isClosed()==false){
 				
 				//Get the message sent from client

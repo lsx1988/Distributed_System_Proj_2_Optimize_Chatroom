@@ -27,13 +27,13 @@ public class Server {
 		//Specify the keystore details (this can be specified as VM arguments as well)
 		//the keystore file contains an application's own certificate and private key
 		//keytool -genkey -keystore <keystorename> -keyalg RSA
-		System.setProperty("javax.net.ssl.keyStore","/Users/maria/ssl/mykeystore");
+		System.setProperty("javax.net.ssl.keyStore","..\\..\\DS_Proj_2_Optimize_Chatroom\\mykeystore");
 		
 		//Password to access the private key from the keystore file
 		System.setProperty("javax.net.ssl.keyStorePassword","mypassword");
 
 		// Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
-		System.setProperty("javax.net.debug","all");
+		//System.setProperty("javax.net.debug","all");
 	
 /**
 *  After reading the config file, set up two listening thread

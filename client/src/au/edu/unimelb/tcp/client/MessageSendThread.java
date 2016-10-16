@@ -1,17 +1,16 @@
 package au.edu.unimelb.tcp.client;
-
-import java.io.DataOutputStream;
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.net.Socket;
+import java.io.OutputStreamWriter;
 import java.util.Scanner;
-
+import javax.net.ssl.SSLSocket;
 import org.json.simple.JSONObject;
 
 public class MessageSendThread implements Runnable {
 
-	private Socket socket;
+	private SSLSocket socket;
 
-	private DataOutputStream out;
+	private BufferedWriter out;
 	
 	private State state;
 
@@ -20,16 +19,17 @@ public class MessageSendThread implements Runnable {
 	// reading from console
 	private Scanner cmdin = new Scanner(System.in);
 
-	public MessageSendThread(Socket socket, State state, boolean debug) throws IOException {
+	public MessageSendThread(SSLSocket socket, State state, boolean debug) throws IOException {
 		this.socket = socket;
 		this.state = state;
-		out = new DataOutputStream(socket.getOutputStream());
+		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 		this.debug = debug;
+		
 	}
 
 	@Override
 	public void run() {
-		
+
 		try {
 			// send the #newidentity command
 			MessageSend(socket, "#newidentity " + state.getIdentity());
@@ -56,12 +56,12 @@ public class MessageSendThread implements Runnable {
 			System.out.println("Sending: " + obj.toJSONString());
 			System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 		}
-		out.write((obj.toJSONString() + "\n").getBytes("UTF-8"));
+		out.write((obj.toJSONString() + "\n"));
 		out.flush();
 	}
 	
 	// send command and check validity
-	public void MessageSend(Socket socket, String msg) throws IOException {
+	public void MessageSend(SSLSocket socket, String msg) throws IOException {
 		JSONObject sendToServer = new JSONObject();
 		String []array = msg.split(" ");
 		if(!array[0].startsWith("#")) {
@@ -115,7 +115,7 @@ public class MessageSendThread implements Runnable {
 		
 	}
 
-	public void switchServer(Socket temp_socket, DataOutputStream temp_out) throws IOException {
+	public void switchServer(SSLSocket temp_socket, BufferedWriter temp_out) throws IOException {
 		// switch server initiated by the receiving thread
 		// need to use synchronize
 		synchronized(out) {
