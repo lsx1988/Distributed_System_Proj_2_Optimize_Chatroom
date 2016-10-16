@@ -33,10 +33,9 @@ public class MessageReceiveThread implements Runnable {
 	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug) throws IOException {
 		this.socket = socket;
 		this.state = state;
-		this.messageSendThread = messageSendThread;
 		this.debug = debug;
-		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-		
+		this.messageSendThread = messageSendThread;		
+		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();	
 	}
 
 	@Override

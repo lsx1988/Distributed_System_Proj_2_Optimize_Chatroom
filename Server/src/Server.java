@@ -31,9 +31,6 @@ public class Server {
 		
 		//Password to access the private key from the keystore file
 		System.setProperty("javax.net.ssl.keyStorePassword","mypassword");
-
-		// Enable debugging to view the handshake and communication which happens between the SSLClient and the SSLServer
-		//System.setProperty("javax.net.debug","all");
 	
 /**
 *  After reading the config file, set up two listening thread
@@ -52,15 +49,7 @@ public class Server {
 			//Create SSL server socket for server port
 			SSLServerSocket server_server = (SSLServerSocket) sslserversocketfactory
 					.createServerSocket(configReader.getServerPort(),50, configReader.getServerIP());
-			
-			//Create serversocket for client port
-			//ServerSocket server_client = 
-			//		new ServerSocket(configReader.getClientPort(),50,configReader.getServerIP());
-			
-			//Create serversocket for server port
-			//ServerSocket server_server = 
-			//		new ServerSocket(configReader.getServerPort(),50,configReader.getServerIP());
-			
+						
 			//Listening to client port thread
 			new ListenToClient(server_client).start();
 			

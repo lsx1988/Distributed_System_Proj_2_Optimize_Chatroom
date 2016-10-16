@@ -16,9 +16,9 @@ public class Client {
  */
 		//Location of the Java keystore file containing the collection of 
 		//certificates trusted by this application (trust store).
-		System.setProperty("javax.net.ssl.trustStore", "C:\\Users\\liush\\Documents\\GitHub_Root\\DS_Proj_2_Optimize_Chatroom\\mykeystore");		
-		//System.setProperty("javax.net.debug","all");
+		System.setProperty("javax.net.ssl.trustStore", "C:\\Users\\liush\\Documents\\GitHub_Root\\DS_Proj_2_Optimize_Chatroom\\mykeystore");
 		SSLSocketFactory sslsocketfactory=(SSLSocketFactory) SSLSocketFactory.getDefault();
+		
 		SSLSocket socket = null;
 		String identity = null;
 		boolean debug = false;
@@ -33,7 +33,6 @@ public class Client {
 				identity = values.getIdeneity();
 				int port = values.getPort();
 				debug = values.isDebug();
-				//socket = new Socket(hostname, port);
 				socket = (SSLSocket) sslsocketfactory.createSocket(hostname, port);
 			} catch (CmdLineException e) {
 				e.printStackTrace();

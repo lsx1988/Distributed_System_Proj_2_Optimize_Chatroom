@@ -22,9 +22,8 @@ public class MessageSendThread implements Runnable {
 	public MessageSendThread(SSLSocket socket, State state, boolean debug) throws IOException {
 		this.socket = socket;
 		this.state = state;
-		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 		this.debug = debug;
-		
+		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));		
 	}
 
 	@Override
@@ -32,7 +31,7 @@ public class MessageSendThread implements Runnable {
 
 		try {
 			// send the #newidentity command
-			MessageSend(socket, "#newidentity " + state.getIdentity());
+			MessageSend(socket, "#newidentity " + state.getIdentity() + " " + state.getUsername() + " " + state.getPassword());
 		} catch (IOException e1) {
 			e1.printStackTrace();
 			System.exit(1);
@@ -99,8 +98,14 @@ public class MessageSendThread implements Runnable {
 				sendToServer = ClientMessages.getDeleteRoomRequest(array[1]);
 				send(sendToServer);
 			}
-			else if (array[0].startsWith("#newidentity")) {
-				sendToServer = ClientMessages.getNewIdentityRequest(array[1]);
+			else {
+				System.out.println("Invalid command!");
+				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+			}
+		}
+		else if(array.length == 4){
+			if(array[0].startsWith("#newidentity")){
+				sendToServer = ClientMessages.getNewIdentityRequest(array[1],array[2],array[3]);
 				send(sendToServer);
 			}
 			else {
