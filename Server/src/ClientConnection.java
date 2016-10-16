@@ -3,25 +3,27 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.util.ArrayList;
-
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class ClientConnection extends Thread {
 	
-	private Socket client;
+	private SSLSocket client;
 	private ServerDatabase ds;
 	private JSONParser parser;
 	private JSONObject reply;
+	SSLSocketFactory sslsocketfactory;
 	
-	public ClientConnection (Socket client){
+	public ClientConnection (SSLSocket client){
 		this.client = client;
 		this.reply = new JSONObject();
 		this.ds = ServerDatabase.getInstance();
 		this.parser = new JSONParser();
+		this.sslsocketfactory= (SSLSocketFactory) SSLSocketFactory.getDefault();
 	}
 	
 	public void run(){
@@ -634,11 +636,7 @@ public class ClientConnection extends Thread {
 		reply.clear();
 		return str+"\n";
 	}
-	
-	
-	
-	
-	
+
 	//send the message to requesting server and read the reply from that server
 	public JSONObject sendToServerAndGetFeedback(String serverID,String message){
 		
@@ -646,7 +644,9 @@ public class ClientConnection extends Thread {
 		
 		try {						
 			String[] info = ds.getInfo(serverID);
-			Socket socket = new Socket(info[1],Integer.parseInt(info[3]));			
+			//Create SSL socket and connect it to the remote server 
+			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(info[1], Integer.parseInt(info[3]));
+			//Socket socket = new Socket(info[1],Integer.parseInt(info[3]));			
 			BufferedWriter bw = new BufferedWriter(
 											new OutputStreamWriter(
 													socket.getOutputStream(),"UTF-8"));
@@ -669,7 +669,8 @@ public class ClientConnection extends Thread {
 		
 		try {						
 			String[] info = ds.getInfo(serverID);
-			Socket socket = new Socket(info[1],Integer.parseInt(info[3]));			
+			//Create SSL socket and connect it to the remote server 
+			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(info[1], Integer.parseInt(info[3]));		
 			BufferedWriter bw = new BufferedWriter(
 											new OutputStreamWriter(
 													socket.getOutputStream(),"UTF-8"));

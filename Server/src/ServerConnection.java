@@ -3,18 +3,18 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.net.Socket;
+import javax.net.ssl.SSLSocket;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class ServerConnection extends Thread {
 	
-	private Socket server;
+	private SSLSocket server;
 	private ServerDatabase ds;
 	private JSONParser parser;
 	
-	public ServerConnection (Socket server){
+	public ServerConnection (SSLSocket server){
 		this.server = server;
 		this.ds = ServerDatabase.getInstance();
 		this.parser = new JSONParser();

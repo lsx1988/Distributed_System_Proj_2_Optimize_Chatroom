@@ -19,6 +19,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import javax.net.ssl.SSLSocket;
+
 import org.json.simple.JSONObject;
 
 public class ServerDatabase {
@@ -27,7 +30,7 @@ public class ServerDatabase {
 	
 	//Recording the related info of client, including its connection socket, bw, br, roomid, isOwner...
 	//Index by client connection socket
-	private Map<Socket,JSONObject> userInfo;
+	private Map<SSLSocket,JSONObject> userInfo;
 	
 	//Recording the server info
 	private ArrayList<String[]> serverInfo;
@@ -48,7 +51,7 @@ public class ServerDatabase {
 	
 	//Constructor
 	public ServerDatabase(){
-		userInfo = new HashMap<Socket, JSONObject>();
+		userInfo = new HashMap<SSLSocket, JSONObject>();
 		serverInfo = new ArrayList<String[]>();
 		identityLock = new ArrayList<JSONObject>();
 		roomidLock = new ArrayList<JSONObject>();
@@ -129,7 +132,7 @@ public class ServerDatabase {
 	 
 	//When catch the client connection request, create the client info
 	@SuppressWarnings("unchecked")
-	public void createClient(Socket socket,BufferedReader br, BufferedWriter bw){
+	public void createClient(SSLSocket socket,BufferedReader br, BufferedWriter bw){
 		JSONObject jsOb = new JSONObject();
 		jsOb.put("socket",socket);
 		jsOb.put("bw", bw);
@@ -144,7 +147,7 @@ public class ServerDatabase {
 	 	
 	//Update the owner key
 	@SuppressWarnings("unchecked")
-	public void setOwner(Socket socket, boolean isRoomOwner){
+	public void setOwner(SSLSocket socket, boolean isRoomOwner){
         JSONObject jsOb = this.userInfo.get(socket);
         jsOb.replace("owner", isRoomOwner);
 		this.userInfo.replace(socket, jsOb);
@@ -152,7 +155,7 @@ public class ServerDatabase {
 	
 	//Update the identity key
 	@SuppressWarnings("unchecked")
-	public void setIdentity(Socket socket, String identity){
+	public void setIdentity(SSLSocket socket, String identity){
         JSONObject jsOb = this.userInfo.get(socket);
         jsOb.replace("identity", identity);
 		this.userInfo.replace(socket, jsOb);
@@ -160,7 +163,7 @@ public class ServerDatabase {
 	
 	//Update the roomid key
 	@SuppressWarnings("unchecked")
-	public void setRoomid(Socket socket, String roomid){
+	public void setRoomid(SSLSocket socket, String roomid){
         JSONObject jsOb = this.userInfo.get(socket);
         jsOb.replace("roomid", roomid);
 		this.userInfo.replace(socket, jsOb);
@@ -170,30 +173,30 @@ public class ServerDatabase {
 	
 	//Get owner value
 	@SuppressWarnings("unchecked")
-	public boolean isOwner(Socket socket){
+	public boolean isOwner(SSLSocket socket){
 		return (boolean) this.userInfo.get(socket).get("owner");
 	}
 	
 	//Get identity value
 	@SuppressWarnings("unchecked")
-	public String getIdentity(Socket socket){
+	public String getIdentity(SSLSocket socket){
 		return (String) this.userInfo.get(socket).get("identity");
 	}
 	
 	//Get roomid value
 	@SuppressWarnings("unchecked")
-	public String getRoomid(Socket socket){
+	public String getRoomid(SSLSocket socket){
 		return (String) this.userInfo.get(socket).get("roomid");
 	}
 	
 	//Get the bufferedwriter object of any other client in the same room
-	public BufferedWriter[] getBWsInSameRoom(Socket socket, boolean isSelfIncluded){
+	public BufferedWriter[] getBWsInSameRoom(SSLSocket socket, boolean isSelfIncluded){
 		
-		Socket[] sockets = getSocketsInSameRoom(socket,isSelfIncluded);
+		SSLSocket[] sockets = getSocketsInSameRoom(socket,isSelfIncluded);
 		
 		ArrayList<BufferedWriter> temp = new ArrayList<BufferedWriter>();
 		
-		for(Socket s:sockets){
+		for(SSLSocket s:sockets){
 			temp.add((BufferedWriter) this.userInfo.get(s).get("bw"));
 		}
 
@@ -201,13 +204,13 @@ public class ServerDatabase {
 	}
 	
 	//Get all identity in the same room with current client
-	public ArrayList<String> getAllIdentityInSameRoom(Socket socket, boolean isSelfIncluded){
+	public ArrayList<String> getAllIdentityInSameRoom(SSLSocket socket, boolean isSelfIncluded){
 		
-		Socket[] sockets = getSocketsInSameRoom(socket,isSelfIncluded);
+		SSLSocket[] sockets = getSocketsInSameRoom(socket,isSelfIncluded);
 		
 		ArrayList<String> temp = new ArrayList<String>();
 		
-		for(Socket s:sockets){
+		for(SSLSocket s:sockets){
 			temp.add(getIdentity(s));
 		}
 
@@ -216,12 +219,12 @@ public class ServerDatabase {
 	
 	//Get the bufferedwriter object of any other client in the same room
 	//True=include current client itself
-	public Socket[] getSocketsInSameRoom(Socket socket, boolean isInclude){
+	public SSLSocket[] getSocketsInSameRoom(SSLSocket socket, boolean isInclude){
 		
-		ArrayList<Socket> temp = new ArrayList<Socket>();
+		ArrayList<SSLSocket> temp = new ArrayList<SSLSocket>();
 		String roomid = (String) this.userInfo.get(socket).get("roomid");
 		
-		for(Socket s:this.userInfo.keySet()){
+		for(SSLSocket s:this.userInfo.keySet()){
 			
 			if(isInclude==false){
 				
@@ -238,7 +241,7 @@ public class ServerDatabase {
 				}
 			}
 		}		
-		return temp.toArray(new Socket[temp.size()]);
+		return temp.toArray(new SSLSocket[temp.size()]);
 	}
 	
 	//Get the owner identity of current roomid
@@ -336,16 +339,16 @@ public class ServerDatabase {
 	/*--------------other method------------------*/
 
 	//reset the roomid of each client in the current chat room
-	public void resetRoomID(Socket socket,boolean isSelfInclude){
+	public void resetRoomID(SSLSocket socket,boolean isSelfInclude){
 		
-		Socket[] sockets = getSocketsInSameRoom(socket,isSelfInclude);
-		for(Socket s:sockets){
+		SSLSocket[] sockets = getSocketsInSameRoom(socket,isSelfInclude);
+		for(SSLSocket s:sockets){
 			setRoomid(s, mainhall);
 		}
 	}
 	
 	//remove the client from current server
-	public void deleteClient(Socket socket){
+	public void deleteClient(SSLSocket socket){
 		try {
 			socket.close();
 		} catch (IOException e) {
@@ -436,7 +439,7 @@ public class ServerDatabase {
 	/*-------------------Operation----------------------*/
 	
 	//send message to clients in the same char room
-	public void sentToClientsInSameChatRoom(Socket socket, String message, boolean isSelfInclude){
+	public void sentToClientsInSameChatRoom(SSLSocket socket, String message, boolean isSelfInclude){
 		for(BufferedWriter bw:this.getBWsInSameRoom(socket,isSelfInclude)){
 			try {
 				bw.write(message);
