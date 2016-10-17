@@ -318,7 +318,6 @@ public class ServerDatabase {
 	//return roomid list
 	public ArrayList<String> getAllRoomidIntheSystem(){
 		ArrayList<String> roomlist = new ArrayList<String>();
-		System.out.println(this.roomidLock);
 		
 		for(JSONObject jsOb:this.roomidLock){
 			roomlist.add((String) jsOb.get("roomid"));
@@ -326,7 +325,6 @@ public class ServerDatabase {
 		for(String room:this.getAllRoomidInCurrentServer()){
 			roomlist.add(room);
 		}
-		System.out.println(roomlist);
 		return roomlist;
 	}
 	

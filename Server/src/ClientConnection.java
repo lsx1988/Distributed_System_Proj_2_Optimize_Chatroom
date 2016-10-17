@@ -151,7 +151,6 @@ public class ClientConnection extends Thread {
 				if(getMessage(message,"type").equals("list")){					
 					//get all rooms in system and send to current client					
 					clientBW.write(roomlist(ds.getAllRoomidIntheSystem()));
-					System.err.println(ds.getAllRoomidIntheSystem());
 					clientBW.flush();
 				} 
 				
@@ -312,8 +311,12 @@ public class ClientConnection extends Thread {
 					//get the former roomid of new join client
 					String formerRoomid = getMessage(message,"former");
 					
+					String username= getMessage(message,"username");
+					
+					String password= getMessage(message,"password");
+					
 					//add the new coming client to server database, default roomid is mainhall
-					ds.createClient(client, clientBR, clientBW,"","");
+					ds.createClient(client, clientBR, clientBW,username,password);
 					ds.setIdentity(client, identity);
 					
 					//if the request roomid is still avaiable, move client to the roomid
@@ -407,7 +410,6 @@ public class ClientConnection extends Thread {
 						ds.sentToClientsInSameChatRoom(client, roomchange(identity, roomid, ""), true);
 						
 						//remove the client from serverdatabse
-						System.out.println("remove the client");
 						ds.deleteClient(client);
 
 					}else{
@@ -450,13 +452,12 @@ public class ClientConnection extends Thread {
 			}
 			
 		} catch (Exception e) {
-			
-			System.out.println("the connection is break");
 
 			//When the client end break down or quit, delete the client from current user
 			//ds.deleteClient(client);
 			
 			//get the roomid of current client
+			
 			String roomid = ds.getRoomid(client);
 			
 			//get the identity of currnet client;

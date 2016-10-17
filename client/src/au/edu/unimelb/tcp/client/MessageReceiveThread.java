@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.concurrent.BlockingQueue;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -26,19 +27,21 @@ public class MessageReceiveThread implements Runnable {
 
 	private JSONParser parser = new JSONParser();
 
-	private boolean run = true;
+	private volatile boolean run = true;
 	
 	private MessageSendThread messageSendThread;
 	
 	private SSLSocketFactory sslsocketfactory;
+	
+	private BlockingQueue<String> messageQueue;
 
-	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug, Window frame) throws IOException {
+	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug, Window frame, BlockingQueue<String> messageQueue ) throws IOException {
 		this.socket = socket;
 		this.state = state;
 		this.debug = debug;
 		this.frame = frame;
-		this.messageSendThread = messageSendThread;		
-		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();	
+		this.messageSendThread = messageSendThread;	
+		this.messageQueue = messageQueue;	
 	}
 
 	@Override
@@ -56,9 +59,9 @@ public class MessageReceiveThread implements Runnable {
 				}
 				MessageReceive(socket, message);
 			}
-			System.exit(0);
-			in.close();
-			socket.close();
+//			System.exit(0);
+//			in.close();
+//			socket.close();
 		} catch (ParseException e) {
 			System.out.println("Message Error: " + e.getMessage());
 			//System.exit(1);
@@ -82,30 +85,37 @@ public class MessageReceiveThread implements Runnable {
 			// 如果拒绝链接（identity值不符合要求）
 			if (feedback.equals("false")) {
 				//提示用户名正在使用中
-				this.frame.getTextOut().setText(state.getIdentity() + " already in use!\r\n");			
+				this.frame.getTextarea_display().setText(state.getIdentity() + " already in use!\r\n");			
 				//关闭针对该socket的输入流
 				in.close();
 				//关闭socket链接，但不退出程序，让用户可以再次尝试
-				socket.close();
+				//socket.close();
+				//结束线程
+				messageQueue.add("#quit");
 			}
 			// 如果拒绝链接（用户名与密码不符）
 			if(feedback.equals("NotMatch")){
 				//提示用户名与密码不符
-				this.frame.getTextOut().setText("Wrong username or password!\r\n");
+				this.frame.getTextarea_display().setText("Wrong username or password!\r\n");
 				//关闭针对该socket的输入流
 				in.close();
 				//关闭socket链接，但不退出程序，让用户可以再次尝试
-				socket.close();
+				//socket.close();
+				//结束线程
+				messageQueue.add("#quit");
 			}
 			
 			// 如果拒绝链接（账户名已经登陆）
 			if(feedback.equals("repeatLogin")){
 				//提示账户已经登陆
-				this.frame.getTextOut().setText("The username has already logged in!\r\n");
+				this.frame.getTextarea_display().setText("The username has already logged in!\r\n");
 				//关闭针对该socket的输入流
 				in.close();
 				//关闭socket链接，但不退出程序，让用户可以再次尝试
-				socket.close();
+				//socket.close();
+				//结束线程
+				messageQueue.add("#quit");
+				
 			}
 			
 			//结束，不再继续判定
@@ -119,7 +129,7 @@ public class MessageReceiveThread implements Runnable {
 
 			//将房间逐一加入下拉列表中
 			for (String a:array) {
-				this.frame.getRoomList().addItem(a);
+				this.frame.getTextlist_roomList().addItem(a);
 			}
 			return;
 		}
@@ -135,11 +145,13 @@ public class MessageReceiveThread implements Runnable {
 					//关闭socket输入流
 					in.close();
 					//直接关闭窗口，退出程序
-					System.exit(1);
+					//System.exit(1);
+					socket.close();
+					this.run = false;
 				//若是其他用户退出
 				} else {
 					//在文本面板上提示用户是谁退出了
-					this.frame.getTextOut().append(message.get("identity") + " has quit!" +"\r\n");
+					this.frame.getTextarea_display().append(message.get("identity") + " has quit!" +"\r\n");
 				}
 			// 如果用户没有历史roomid信息，则为新用户
 			} else if (message.get("former").equals("")) {
@@ -148,58 +160,54 @@ public class MessageReceiveThread implements Runnable {
 				if (message.get("identity").equals(state.getIdentity())) {
 					state.setRoomId((String) message.get("roomid"));
 					//当连接成功时，显示当前用户所在的房间
-					this.frame.getCurrentRoom().setText((String) message.get("roomid"));
+					this.frame.getTextarea_currentRoom().setText((String) message.get("roomid"));
 					//在文本显示窗口提示“登陆成功”
-					this.frame.getTextOut().append("----You login the Chatting System Successfully----\r\n");
+					this.frame.getTextarea_display().append("----You login the Chatting System Successfully----\r\n");
 					//当链接成功后，将Connect按钮禁用，防止用户再次点击造成报错
-					this.frame.getConnectButtton().setEnabled(false);
+					this.frame.getButton_connect().setEnabled(false);
 				}
 				//当为其他用户时		
 				//在文本显示窗口提示“XXX用户登陆了”
-				this.frame.getTextOut().append(message.get("identity") + " has moved to " + message.get("roomid") + "\r\n");
+				this.frame.getTextarea_display().append(message.get("identity") + " has moved to " + message.get("roomid") + "\r\n");
 						
 			// 当历史房间与新房间一直时，用户实际没有移动
 			} else if (message.get("former").equals(message.get("roomid"))) {
 				
 				//当前用户房间显示不变，不许做任何改动
-				this.frame.getTextOut().append("roomid is not available\r\n");
+				this.frame.getTextarea_display().append("roomid is not available\r\n");
 			}
 			// 当用户所在房间确有改变时
 			else {
 				// 如果用户名与当前用户一致，则更新其所在房间
 				if (message.get("identity").equals(state.getIdentity())) {
 					state.setRoomId((String) message.get("roomid"));
-					this.frame.getTextOut().append("You move the new roomid successfully\r\n");
+					this.frame.getTextarea_display().append("You move the new roomid successfully\r\n");
 					//更新当前用户所在的房间
-					this.frame.getCurrentRoom().setText((String) message.get("roomid"));
+					this.frame.getTextarea_currentRoom().setText((String) message.get("roomid"));
 				}
 				
 				//在文本显示窗口提示“XXX移动到某房间”
-				this.frame.getTextOut().append(message.get("identity") + " has moved to " + message.get("roomid")+"\r\n");				
+				this.frame.getTextarea_display().append(message.get("identity") + " has moved to " + message.get("roomid")+"\r\n");				
 			}
 			return;
 		}
 		
 		// server reply of #who
 		if (type.equals("roomcontents")) {
-			JSONArray array = (JSONArray) message.get("identities");
-			System.out.print(message.get("roomid") + " contains");
+			JSONArray array = (JSONArray) message.get("identities");			
 			for (int i = 0; i < array.size(); i++) {
-				System.out.print(" " + array.get(i));
 				if (message.get("owner").equals(array.get(i))) {
-					System.out.print("*");
+					this.frame.getTextarea_whoOut().append((String)array.get(i) + "*\r\n");				
+				}else{
+					this.frame.getTextarea_whoOut().append((String)array.get(i)+"\r\n");	
 				}
 			}
-			System.out.println();
-			System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			return;
 		}
 		
 		// server forwards message
-		if (type.equals("message")) {
-			System.out.println(message.get("identity") + ": "
-					+ message.get("content"));
-			System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+		if (type.equals("message")) {	
+			this.frame.getTextarea_display().append(message.get("identity")+":"+message.get("content")+"\r\n");
 			return;
 		}
 		
@@ -209,12 +217,11 @@ public class MessageReceiveThread implements Runnable {
 			boolean approved = Boolean.parseBoolean((String)message.get("approved"));
 			String temp_room = (String)message.get("roomid");
 			if (!approved) {
-				System.out.println("Create room " + temp_room + " failed.");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				this.frame.getTextarea_display().append("Create room " + temp_room + " failed.\r\n");
 			}
 			else {
-				System.out.println("Room " + temp_room + " is created.");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				this.frame.getTextarea_display().append("Room " + temp_room + " is created.\r\n");
+				this.frame.getTextarea_currentRoom().setText(temp_room);
 			}
 			return;
 		}
@@ -224,12 +231,11 @@ public class MessageReceiveThread implements Runnable {
 			boolean approved = Boolean.parseBoolean((String)message.get("approved"));
 			String temp_room = (String)message.get("roomid");
 			if (!approved) {
-				System.out.println("Delete room " + temp_room + " failed.");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				this.frame.getTextarea_display().append("Delete room " + temp_room + " failed.\r\n");				
 			}
 			else {
+				this.frame.getTextarea_display().append("Room " + temp_room + " is deleted.\r\n");
 				System.out.println("Room " + temp_room + " is deleted.");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			}
 			return;
 		}
@@ -246,13 +252,13 @@ public class MessageReceiveThread implements Runnable {
 				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			}
 			
-			//Socket temp_socket = new Socket(host, port);
+			System.setProperty("javax.net.ssl.trustStore", "C:\\Users\\liush\\Documents\\GitHub_Root\\DS_Proj_2_Optimize_Chatroom\\mykeystore");
+			this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket temp_socket = (SSLSocket) sslsocketfactory.createSocket(host, port);
 			
 			// send #movejoin
-			//BufferedWriter out = new DataOutputStream(temp_socket.getOutputStream());
 			BufferedWriter out = new BufferedWriter(new OutputStreamWriter(temp_socket.getOutputStream()));
-			JSONObject request = ClientMessages.getMoveJoinRequest(state.getIdentity(), state.getRoomId(), temp_room);
+			JSONObject request = ClientMessages.getMoveJoinRequest(state.getIdentity(), state.getRoomId(),state.getUsername(),state.getPassword(), temp_room);
 			if (debug) {
 				System.out.println("Sending: " + request.toJSONString());
 				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
@@ -273,16 +279,14 @@ public class MessageReceiveThread implements Runnable {
 				messageSendThread.switchServer(temp_socket, out);
 				switchServer(temp_socket, temp_in);
 				String serverid = (String)obj.get("serverid");
-				System.out.println(state.getIdentity() + " switches to server " + serverid);
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				this.frame.getTextarea_display().append("Your switches to server " + serverid +" successfully");
 			}
 			// receive invalid message
 			else {
 				temp_in.close();
 				out.close();
 				temp_socket.close();
-				System.out.println("Server change failed");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				this.frame.getTextarea_display().append("Server change failed");
 			}
 			return;
 		}

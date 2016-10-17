@@ -5,6 +5,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Scanner;
+import java.util.concurrent.BlockingQueue;
+
 import javax.net.ssl.SSLSocket;
 import org.json.simple.JSONObject;
 
@@ -22,15 +24,17 @@ public class MessageSendThread implements Runnable {
 	
 	private String msg;
 	
-	private boolean wait;
+	public boolean run = true;
+	
+	private BlockingQueue<String> messageQueue;
 
-	public MessageSendThread(SSLSocket socket, State state, boolean debug, Window frame) throws IOException {
+	public MessageSendThread(SSLSocket socket, State state, boolean debug, Window frame, BlockingQueue<String> messageQueue) throws IOException {
 		this.socket = socket;
 		this.state = state;
 		this.debug = debug;
 		this.frame = frame;
 		this.msg = null;
-		this.wait = true;
+		this.messageQueue = messageQueue;
 		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));		
 	}
 
@@ -45,31 +49,15 @@ public class MessageSendThread implements Runnable {
 			System.exit(1);
 		}
 		
-		while (true) {
-			try {
-				while(wait){
-					this.frame.getQuitButtton().addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent e) {
-							msg = "#quit";
-							wait = false;
-						}
-					});
-					this.frame.getRefreshRoomButtton().addActionListener(new ActionListener() {
-						public void actionPerformed(ActionEvent e) {
-							msg = "#list";
-							wait = false;
-						}
-					});
-				}
+		try{
+			while(run){
+				msg = messageQueue.take();
 				MessageSend(socket, msg);
-				//wait = true;
-			} catch (IOException e) {
-				System.out.println("Communication Error: " + e.getMessage());
-				System.out.println("the button is wrong");
-				System.exit(1);
-			}
-		}
-		
+			}			
+		} catch (IOException | InterruptedException e) {
+			System.out.println("Communication Error: " + e.getMessage());
+			//System.exit(1);
+		}	
 	}
 
 	private void send(JSONObject obj) throws IOException {
@@ -97,6 +85,10 @@ public class MessageSendThread implements Runnable {
 			else if(array[0].startsWith("#quit")) {
 				sendToServer = ClientMessages.getQuitRequest();
 				send(sendToServer);
+				out.close();
+				run=false;
+				//socket.close();
+				
 			}
 			else if(array[0].startsWith("#who")) {
 				sendToServer = ClientMessages.getWhoRequest();
