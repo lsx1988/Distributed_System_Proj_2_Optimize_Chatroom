@@ -23,22 +23,20 @@ public class ConfigReader {
 		return serverPort;
 	}
 	
-	public void read(String serverID, String path){
-		
-		String[] info = new String[4];
+	public void read(String serverID, String configPath,String userFilePath){
 	
 		try {
 			//Get the br of config file object
-			BufferedReader br=
+			BufferedReader br_config=
 					new BufferedReader(
 							new FileReader(
-									new File(path)));
+									new File(configPath)));
 			String str=null;
 			
-			while((str=br.readLine())!=null){
+			while((str=br_config.readLine())!=null){
 				
 				//split the string by tab
-				info=str.split("\t");
+				String[] info=str.split("\t");
 				
 				if(serverID.equals(info[0])){
 					
@@ -48,6 +46,17 @@ public class ConfigReader {
 					
 				}else{
 					ds.addServer(info);
+				}
+				
+				//Get the br of user file object
+				BufferedReader br_user=
+						new BufferedReader(
+								new FileReader(
+										new File(userFilePath)));
+				while((str=br_user.readLine())!=null){
+					//split the string by tab
+					String[] info_2=str.split("\t");
+					ds.addUser(info_2[0],info_2[1],info_2[2]);
 				}
 			}
 		} catch (IOException e) {

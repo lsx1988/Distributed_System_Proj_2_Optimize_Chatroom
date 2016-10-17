@@ -24,17 +24,18 @@ public class ServerConnection extends Thread {
 	public void run(){
 		
 		try {
-			
+					
 			//create server socket bw and br
 			BufferedWriter serverBW = new BufferedWriter(
 											new OutputStreamWriter(
 												server.getOutputStream(),"UTF-8"));
 			BufferedReader serverBR = new BufferedReader(
 											new InputStreamReader(
-												server.getInputStream(),"UTF-8"));			
+												server.getInputStream(),"UTF-8"));
+			
 			//get message from any other server
 			String message = serverBR.readLine();
-			
+
 			/**
 			 * receive the lockidentity message
 			 */
@@ -59,7 +60,7 @@ public class ServerConnection extends Thread {
 				ds.lockIdentity(serverID,identity);
 				
 				//create the lock identity reply message
-				String str = lockIdentityReply(identity,locked);
+				String str = lockReply(locked);
 				
 				//reply to the requesting sever
 				serverBW.write(str+"\n");
@@ -79,6 +80,53 @@ public class ServerConnection extends Thread {
 
 				//release the identity in locking list
 				ds.releaseIdentity(serverID, identity);
+
+			}
+			
+			/**
+			 * receive the lockuser message
+			 */
+			if(getMessage(message,"type").equals("lockuser")){
+			
+				//get username from message
+				String username = getMessage(message,"username");
+				
+				//get password from message
+				String password = getMessage(message,"password");
+				
+				//check if the requited username is already exist in current server or its locking list
+				String locked=null;
+				if(ds.isUsernameLocked(username)||
+						ds.isUsernameHasLogined(username)){
+					locked="false";
+				}else{
+					locked="true";
+				}	
+				
+				//lock the username
+				ds.lockUser(username,password);
+				
+				//create the lock identity reply message
+				String str = lockReply(locked);
+				
+				//reply to the requesting sever
+				serverBW.write(str+"\n");
+				serverBW.flush();
+			}
+			
+			/**
+			 * 当type类型为releaseuser时
+			 */
+			if(getMessage(message,"type").equals("releaseuser")){
+				
+				//get the identity from message
+				String username = getMessage(message,"username");
+				
+				//get the serverid from message
+				String password = getMessage(message,"password");
+
+				//release the identity in locking list
+				ds.releaseUser(username,password);
 
 			}
 			
@@ -166,11 +214,8 @@ public class ServerConnection extends Thread {
 	}
 		
 	@SuppressWarnings("unchecked")
-	public String lockIdentityReply(String identity, String locked){		
+	public String lockReply(String locked){		
 		JSONObject jsOb = new JSONObject();
-		jsOb.put("type","lockidentity");
-		jsOb.put("identity", identity);
-		jsOb.put("serverid", Server.serverID);
 		jsOb.put("locked", locked);
 		return jsOb.toJSONString();			
 	}

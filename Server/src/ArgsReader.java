@@ -3,7 +3,7 @@ import org.kohsuke.args4j.CmdLineParser;
 
 public class ArgsReader {
 	
-	private static String serverID, path;
+	private static String serverID, configPath,userFilePath;
 		
 	public static void read(String[] args){
 		
@@ -18,7 +18,8 @@ public class ArgsReader {
 			//Parse the arguments
 			parser.parseArgument(args);
 		    serverID=argsBean.getServerID();
-			path=argsBean.getPath();
+			configPath=argsBean.getConfigPath();
+			userFilePath=argsBean.getUserFilePath();
 			
 		} catch (CmdLineException e) {				
 			System.err.println(e.getMessage());					
@@ -30,7 +31,11 @@ public class ArgsReader {
 		return serverID;
 	}
 
-	public static String getPath() {
-		return path;
+	public static String getConfigPath() {
+		return configPath;
+	}
+	
+	public static String getUserFilePath() {
+		return userFilePath;
 	}
 }

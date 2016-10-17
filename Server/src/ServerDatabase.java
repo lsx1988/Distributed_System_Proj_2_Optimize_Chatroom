@@ -35,8 +35,14 @@ public class ServerDatabase {
 	//Recording the server info
 	private ArrayList<String[]> serverInfo;
 	
+	//Recording the approved user info
+	private Map<String,Map<String,String>> approvedUserInfo;
+	
 	//The locking list of identity, indexed by serverID
 	private ArrayList<JSONObject> identityLock;
+	
+	//The locking list of user, indexed by username
+	private ArrayList<JSONObject> usernameLock;
 	
 	//The locking list of roomid, indexed by serverID
 	private ArrayList<JSONObject> roomidLock;
@@ -55,6 +61,8 @@ public class ServerDatabase {
 		serverInfo = new ArrayList<String[]>();
 		identityLock = new ArrayList<JSONObject>();
 		roomidLock = new ArrayList<JSONObject>();
+		usernameLock = new ArrayList<JSONObject>();
+		approvedUserInfo = new HashMap<String,Map<String,String>>();
 	}
 	
 	//Get the unique and same instance of class
@@ -62,77 +70,99 @@ public class ServerDatabase {
 		return instance;
 	}
 	
+	/*-------------Method used for handling the approved user Info------------*/
+	
+	//add approved user info to list
+	public void addUser(String username,String password, String right){
+		Map<String,String> temp = new HashMap<String,String>();
+		temp.put(password, right);
+		approvedUserInfo.put(username, temp);
+	}
+	
+	//check if the username and password is matching
+	public boolean isUsernameAndPasswordMatch(String username,String password){
+		if(approvedUserInfo.containsKey(username) && approvedUserInfo.get(username).containsKey(password)){
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
+	//return the right of a specific user
+	public String getUserRight(String username, String password){
+		return approvedUserInfo.get(username).get(password);
+	}
+		
 	/*-------------Method used for handling the serverInfo------------*/
 	
-	   	//return all server info
-		public ArrayList<String[]> getServerInfo(){
-			return serverInfo;
+   	//return all server info
+	public ArrayList<String[]> getServerInfo(){
+		return serverInfo;
+	}
+		
+	//add server config info to list
+	public void addServer(String[] serverConfig){
+		this.serverInfo.add(serverConfig);
+	}
+	
+	//get the client port
+	public int getClientPort(String serverID){
+	
+		int result=0;
+		for(String[] info:this.serverInfo){
+			if(serverID.equals(info[0])){
+				result = Integer.parseInt(info[2]);
+			}
 		}
-		
-		//add server config info to list
-		public void addServer(String[] serverConfig){
-			this.serverInfo.add(serverConfig);
+		return result;
+	}
+	
+	//get the serverport
+	public int getServerPort(String serverID){
+	
+		int result=0;
+		for(String[] info:this.serverInfo){
+			if(serverID.equals(info[0])){
+				result = Integer.parseInt(info[3]);
+			}
 		}
+		return result;
+	}
+	
+	//get the serverip
+	public InetAddress getServerIP(String serverID){
 		
-		//get the client port
-		public int getClientPort(String serverID){
-		
-			int result=0;
-			for(String[] info:this.serverInfo){
-				if(serverID.equals(info[0])){
-					result = Integer.parseInt(info[2]);
+		InetAddress result = null;
+		for(String[] info:this.serverInfo){
+			if(serverID.equals(info[0])){
+				try {
+					result = InetAddress.getByName(info[1]);
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 			}
-			return result;
 		}
+		return result;
+	}
+	
+	//get the config info of specific server
+	public String[] getInfo(String serverID){
 		
-		//get the serverport
-		public int getServerPort(String serverID){
-		
-			int result=0;
-			for(String[] info:this.serverInfo){
-				if(serverID.equals(info[0])){
-					result = Integer.parseInt(info[3]);
-				}
+		String[] result = null;
+		for(String[] info:this.serverInfo){
+			if(serverID.equals(info[0])){
+				result = info;
 			}
-			return result;
 		}
-		
-		//get the serverip
-		public InetAddress getServerIP(String serverID){
-			
-			InetAddress result = null;
-			for(String[] info:this.serverInfo){
-				if(serverID.equals(info[0])){
-					try {
-						result = InetAddress.getByName(info[1]);
-					} catch (UnknownHostException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
-			return result;
-		}
-		
-		//get the config info of specific server
-		public String[] getInfo(String serverID){
-			
-			String[] result = null;
-			for(String[] info:this.serverInfo){
-				if(serverID.equals(info[0])){
-					result = info;
-				}
-			}
-			return result;
-			
-		}
+		return result;		
+	}
 	
 	/*-------------Method used for handling the userInfo--------------*/
 	 
 	//When catch the client connection request, create the client info
 	@SuppressWarnings("unchecked")
-	public void createClient(SSLSocket socket,BufferedReader br, BufferedWriter bw){
+	public void createClient(SSLSocket socket,BufferedReader br, BufferedWriter bw, String username, String password){
 		JSONObject jsOb = new JSONObject();
 		jsOb.put("socket",socket);
 		jsOb.put("bw", bw);
@@ -140,6 +170,9 @@ public class ServerDatabase {
 		jsOb.put("roomid", mainhall);
 		jsOb.put("owner", false);
 		jsOb.put("identity",null);
+		jsOb.put("username", username);
+		jsOb.put("password",password);
+		jsOb.put("right",this.getUserRight(username, password));
 		this.userInfo.put(socket, jsOb);
 	}
 	
@@ -285,6 +318,7 @@ public class ServerDatabase {
 	//return roomid list
 	public ArrayList<String> getAllRoomidIntheSystem(){
 		ArrayList<String> roomlist = new ArrayList<String>();
+		System.out.println(this.roomidLock);
 		
 		for(JSONObject jsOb:this.roomidLock){
 			roomlist.add((String) jsOb.get("roomid"));
@@ -292,6 +326,7 @@ public class ServerDatabase {
 		for(String room:this.getAllRoomidInCurrentServer()){
 			roomlist.add(room);
 		}
+		System.out.println(roomlist);
 		return roomlist;
 	}
 	
@@ -317,6 +352,18 @@ public class ServerDatabase {
 		
 		for(JSONObject jsOb:this.userInfo.values()){
 			if(((String)jsOb.get("identity")).equals(identity)){
+				isExist = true;
+			}
+		}		
+		return isExist;
+	}
+	
+	//if the username and password has already logined in this server
+	public boolean isUsernameHasLogined(String username){
+		boolean isExist = false;
+		
+		for(JSONObject jsOb:this.userInfo.values()){
+			if(jsOb.containsValue(username)){
 				isExist = true;
 			}
 		}		
@@ -350,12 +397,12 @@ public class ServerDatabase {
 	//remove the client from current server
 	public void deleteClient(SSLSocket socket){
 		try {
+			this.userInfo.remove(socket);
 			socket.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			//e.printStackTrace();
-		}
-		this.userInfo.remove(socket);
+		}	
 	}
 
 /*-------------------------------------------------------------------------------*/
@@ -367,6 +414,15 @@ public class ServerDatabase {
 		jsOb.put("serverID", serverID);
 		jsOb.put("identity", identity);
 		this.identityLock.add(jsOb);
+	}
+	
+	//lock the user
+	@SuppressWarnings("unchecked")
+	public void lockUser(String username, String password){
+		JSONObject jsOb = new JSONObject();
+		jsOb.put("username", username);
+		jsOb.put("password", password);
+		this.usernameLock.add(jsOb);
 	}
 	
 	//release lock of identity
@@ -381,10 +437,32 @@ public class ServerDatabase {
 		this.identityLock.remove(temp);
 	}
 	
+	//release lock of username
+	@SuppressWarnings("unchecked")
+	public void releaseUser(String username,String password){
+		JSONObject temp = new JSONObject();
+		for(JSONObject jsOb:this.usernameLock){
+			if(jsOb.containsValue(username)&&jsOb.containsValue(password)){
+				temp = jsOb;
+			}
+		}
+		this.usernameLock.remove(temp);
+	}
+	
 	//if identity is locked
 	public boolean isIdentityLocked(String identity){
 		for(JSONObject jsOb:this.identityLock){
 			if(jsOb.get("identity").equals(identity)){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	//if username is locked
+	public boolean isUsernameLocked(String username){
+		for(JSONObject jsOb:this.usernameLock){
+			if(jsOb.containsValue(username)){
 				return true;
 			}
 		}

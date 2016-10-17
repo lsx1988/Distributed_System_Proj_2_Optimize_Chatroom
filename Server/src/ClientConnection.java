@@ -6,6 +6,8 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.swing.plaf.synth.SynthSeparatorUI;
+
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -16,7 +18,7 @@ public class ClientConnection extends Thread {
 	private ServerDatabase ds;
 	private JSONParser parser;
 	private JSONObject reply;
-	SSLSocketFactory sslsocketfactory;
+	private SSLSocketFactory sslsocketfactory;
 	
 	public ClientConnection (SSLSocket client){
 		this.client = client;
@@ -28,7 +30,8 @@ public class ClientConnection extends Thread {
 	
 	public void run(){
 		
-		try {			
+		try {
+				
 			//Get the br and bw of current client thread
 			BufferedWriter clientBW = new BufferedWriter(
 											new OutputStreamWriter(
@@ -53,6 +56,12 @@ public class ClientConnection extends Thread {
 					//get the identity of new client
 					String identity = getMessage(message,"identity");
 					
+					//get the username of client
+					String username = getMessage(message,"username");
+					
+					//get the password of client
+					String password = getMessage(message,"password");
+					
 					/*If the identity is already in current server of its locking list
 					 * or the identity length is wrong, refuse the connection request
 					 */
@@ -62,12 +71,20 @@ public class ClientConnection extends Thread {
 						//refuse the client
 						clientBW.write(newidentity("false"));
 						clientBW.flush();
+						client.close();					
+					}else if(!ds.isUsernameAndPasswordMatch(username, password)){
+						clientBW.write(newidentity("NotMatch"));
+						clientBW.flush();
+						client.close();						
+					}else if(ds.isUsernameHasLogined(username)){
+						clientBW.write(newidentity("repeatLogin"));
+						clientBW.flush();
 						client.close();
-						
-					}else{
+					}
+					else{
 
 						//add the new client to server database first, in case other thread will add the same client again
-						ds.createClient(client, clientBR, clientBW);
+						ds.createClient(client, clientBR, clientBW, username, password);
 						
 						//update client with its identity
 						ds.setIdentity(client, identity);
@@ -81,6 +98,18 @@ public class ClientConnection extends Thread {
 							//if any feedback with false, update the flag
 							if(((String)jsOb.get("locked")).equals("false")){
 								isApproval = "false";
+							}
+						}
+						
+						//send lockuser message to each server and get their reply
+						for(String[] s:ds.getServerInfo()){
+							
+							//send to server and get feedback
+							JSONObject jsOb = sendToServerAndGetFeedback(s[0],lockuser(username,password));
+							
+							//if any feedback with false, update the flag
+							if(((String)jsOb.get("locked")).equals("false")){
+								isApproval = "repeatLogin";
 							}
 						}
 						
@@ -107,6 +136,11 @@ public class ClientConnection extends Thread {
 						for(String[] s:ds.getServerInfo()){
 							sendToServer(s[0],releaseidentity(Server.serverID,identity));
 						}
+						
+						//create releaseuser message to other server
+						for(String[] s:ds.getServerInfo()){
+							sendToServer(s[0],releaseuser(username,password));
+						}
 					}				
 				}
 		
@@ -117,8 +151,9 @@ public class ClientConnection extends Thread {
 				if(getMessage(message,"type").equals("list")){					
 					//get all rooms in system and send to current client					
 					clientBW.write(roomlist(ds.getAllRoomidIntheSystem()));
+					System.err.println(ds.getAllRoomidIntheSystem());
 					clientBW.flush();
-				}
+				} 
 				
 				/**
 				 * Function 4.3 Ask for list of clients in the current chat room
@@ -278,7 +313,7 @@ public class ClientConnection extends Thread {
 					String formerRoomid = getMessage(message,"former");
 					
 					//add the new coming client to server database, default roomid is mainhall
-					ds.createClient(client, clientBR, clientBW);
+					ds.createClient(client, clientBR, clientBW,"","");
 					ds.setIdentity(client, identity);
 					
 					//if the request roomid is still avaiable, move client to the roomid
@@ -372,6 +407,7 @@ public class ClientConnection extends Thread {
 						ds.sentToClientsInSameChatRoom(client, roomchange(identity, roomid, ""), true);
 						
 						//remove the client from serverdatabse
+						System.out.println("remove the client");
 						ds.deleteClient(client);
 
 					}else{
@@ -414,6 +450,8 @@ public class ClientConnection extends Thread {
 			}
 			
 		} catch (Exception e) {
+			
+			System.out.println("the connection is break");
 
 			//When the client end break down or quit, delete the client from current user
 			//ds.deleteClient(client);
@@ -501,12 +539,36 @@ public class ClientConnection extends Thread {
 	}
 	
 	@SuppressWarnings("unchecked")
+	public String lockuser(String username,String password){
+			
+		String str = null;		
+		reply.put("type", "lockuser");
+		reply.put("username",username);	
+		reply.put("password",password);	
+		str = reply.toJSONString();	
+		reply.clear();
+		return str+"\n";
+	}
+	
+	@SuppressWarnings("unchecked")
 	public String releaseidentity(String serverid,String identity){
 		
 		String str = null;		
 		reply.put("type", "releaseidentity");
 		reply.put("serverid",serverid);	
 		reply.put("identity",identity);	
+		str = reply.toJSONString();	
+		reply.clear();
+		return str+"\n";
+	}
+	
+	@SuppressWarnings("unchecked")
+	public String releaseuser(String username,String password){
+		
+		String str = null;		
+		reply.put("type", "releaseuser");
+		reply.put("username",username);	
+		reply.put("password",password);	
 		str = reply.toJSONString();	
 		reply.clear();
 		return str+"\n";
@@ -644,9 +706,10 @@ public class ClientConnection extends Thread {
 		
 		try {						
 			String[] info = ds.getInfo(serverID);
-			//Create SSL socket and connect it to the remote server 
-			SSLSocket socket = (SSLSocket) sslsocketfactory.createSocket(info[1], Integer.parseInt(info[3]));
-			//Socket socket = new Socket(info[1],Integer.parseInt(info[3]));			
+			
+			//Create SSL socket and connect it to the remote server
+			SSLSocket socket = (SSLSocket) this.sslsocketfactory.createSocket(info[1], Integer.parseInt(info[3]));
+			
 			BufferedWriter bw = new BufferedWriter(
 											new OutputStreamWriter(
 													socket.getOutputStream(),"UTF-8"));

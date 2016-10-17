@@ -6,7 +6,7 @@ import javax.net.ssl.SSLServerSocketFactory;
 
 public class Server {
 
-	public static String serverID, path;
+	public static String serverID, Configpath,userFilePath;
 		
 	public static void main(String[] args) {
 /**
@@ -14,12 +14,13 @@ public class Server {
  */
 		//Get the path and serverID data from command line	
 		ArgsReader.read(args);
-		path = ArgsReader.getPath();
+		Configpath = ArgsReader.getConfigPath();
+		userFilePath = ArgsReader.getUserFilePath();
 		serverID = ArgsReader.getServerID();
 			
 		//Read the config file to get all the server info		
 		ConfigReader configReader = new ConfigReader();
-		configReader.read(serverID, path);
+		configReader.read(serverID, Configpath,userFilePath);
 
 /**
  * Setup the SSl protocal
@@ -31,6 +32,8 @@ public class Server {
 		
 		//Password to access the private key from the keystore file
 		System.setProperty("javax.net.ssl.keyStorePassword","mypassword");
+		
+		System.setProperty("javax.net.ssl.trustStore", "C:\\Users\\liush\\Documents\\GitHub_Root\\DS_Proj_2_Optimize_Chatroom\\mykeystore");
 	
 /**
 *  After reading the config file, set up two listening thread

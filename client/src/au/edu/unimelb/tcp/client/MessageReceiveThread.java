@@ -5,6 +5,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -19,6 +20,7 @@ public class MessageReceiveThread implements Runnable {
 	private SSLSocket socket;
 	private State state;
 	private boolean debug;
+	private Window frame;
 
 	private BufferedReader in;
 
@@ -30,10 +32,11 @@ public class MessageReceiveThread implements Runnable {
 	
 	private SSLSocketFactory sslsocketfactory;
 
-	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug) throws IOException {
+	public MessageReceiveThread(SSLSocket socket, State state, MessageSendThread messageSendThread, boolean debug, Window frame) throws IOException {
 		this.socket = socket;
 		this.state = state;
 		this.debug = debug;
+		this.frame = frame;
 		this.messageSendThread = messageSendThread;		
 		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();	
 	}
@@ -58,10 +61,10 @@ public class MessageReceiveThread implements Runnable {
 			socket.close();
 		} catch (ParseException e) {
 			System.out.println("Message Error: " + e.getMessage());
-			System.exit(1);
+			//System.exit(1);
 		} catch (IOException e) {
 			System.out.println("Communication Error: " + e.getMessage());
-			System.exit(1);
+			//System.exit(1);
 		}
 
 	}
@@ -70,70 +73,109 @@ public class MessageReceiveThread implements Runnable {
 			throws IOException, ParseException {
 		String type = (String) message.get("type");
 		
-		// server reply of #newidentity
+		// 当收到服务器端的newidentity回复时
 		if (type.equals("newidentity")) {
-			boolean approved = Boolean.parseBoolean((String) message.get("approved"));
 			
-			// terminate program if failed
-			if (!approved) {
-				System.out.println(state.getIdentity() + " already in use.");
+			//获取回复是true还是false
+			String feedback = (String) message.get("approved");
+			
+			// 如果拒绝链接（identity值不符合要求）
+			if (feedback.equals("false")) {
+				//提示用户名正在使用中
+				this.frame.getTextOut().setText(state.getIdentity() + " already in use!\r\n");			
+				//关闭针对该socket的输入流
+				in.close();
+				//关闭socket链接，但不退出程序，让用户可以再次尝试
 				socket.close();
-				System.exit(1);
 			}
+			// 如果拒绝链接（用户名与密码不符）
+			if(feedback.equals("NotMatch")){
+				//提示用户名与密码不符
+				this.frame.getTextOut().setText("Wrong username or password!\r\n");
+				//关闭针对该socket的输入流
+				in.close();
+				//关闭socket链接，但不退出程序，让用户可以再次尝试
+				socket.close();
+			}
+			
+			// 如果拒绝链接（账户名已经登陆）
+			if(feedback.equals("repeatLogin")){
+				//提示账户已经登陆
+				this.frame.getTextOut().setText("The username has already logged in!\r\n");
+				//关闭针对该socket的输入流
+				in.close();
+				//关闭socket链接，但不退出程序，让用户可以再次尝试
+				socket.close();
+			}
+			
+			//结束，不再继续判定
 			return;
 		}
 		
-		// server reply of #list
-		if (type.equals("roomlist")) {
-			JSONArray array = (JSONArray) message.get("rooms");
-			// print all the rooms
-			System.out.print("List of chat rooms:");
-			for (int i = 0; i < array.size(); i++) {
-				System.out.print(" " + array.get(i));
+		// 当服务器回复roomlist协议时
+		if (type.equals("roomlist")) {			
+			//获取房间数组
+			ArrayList<String> array = (ArrayList<String>) message.get("rooms");
+
+			//将房间逐一加入下拉列表中
+			for (String a:array) {
+				this.frame.getRoomList().addItem(a);
 			}
-			System.out.println();
-			System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			return;
 		}
 
-		// server sends roomchange
+		// 当服务器返回roomchange协议时
 		if (type.equals("roomchange")) {
 
-			// identify whether the user has quit!
+			// 如果roomid信息为空，说明用户要退出
 			if (message.get("roomid").equals("")) {
-				// quit initiated by the current client
+				
+				// 如果用户名信息为当前用户
 				if (message.get("identity").equals(state.getIdentity())) {
-					System.out.println(message.get("identity") + " has quit!");
+					//关闭socket输入流
 					in.close();
+					//直接关闭窗口，退出程序
 					System.exit(1);
+				//若是其他用户退出
 				} else {
-					System.out.println(message.get("identity") + " has quit!");
-					System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+					//在文本面板上提示用户是谁退出了
+					this.frame.getTextOut().append(message.get("identity") + " has quit!" +"\r\n");
 				}
-			// identify whether the client is new or not
+			// 如果用户没有历史roomid信息，则为新用户
 			} else if (message.get("former").equals("")) {
-				// change state if it's the current client
+				
+				// 如果发来的信息中，identity与当前记录的identity一致，更新其roomid信息
 				if (message.get("identity").equals(state.getIdentity())) {
 					state.setRoomId((String) message.get("roomid"));
+					//当连接成功时，显示当前用户所在的房间
+					this.frame.getCurrentRoom().setText((String) message.get("roomid"));
+					//在文本显示窗口提示“登陆成功”
+					this.frame.getTextOut().append("----You login the Chatting System Successfully----\r\n");
+					//当链接成功后，将Connect按钮禁用，防止用户再次点击造成报错
+					this.frame.getConnectButtton().setEnabled(false);
 				}
-				System.out.println(message.get("identity") + " moves to "
-						+ (String) message.get("roomid"));
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
-			// identify whether roomchange actually happens
+				//当为其他用户时		
+				//在文本显示窗口提示“XXX用户登陆了”
+				this.frame.getTextOut().append(message.get("identity") + " has moved to " + message.get("roomid") + "\r\n");
+						
+			// 当历史房间与新房间一直时，用户实际没有移动
 			} else if (message.get("former").equals(message.get("roomid"))) {
-				System.out.println("room unchanged");
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				
+				//当前用户房间显示不变，不许做任何改动
+				this.frame.getTextOut().append("roomid is not available\r\n");
 			}
-			// print the normal roomchange message
+			// 当用户所在房间确有改变时
 			else {
-				// change state if it's the current client
+				// 如果用户名与当前用户一致，则更新其所在房间
 				if (message.get("identity").equals(state.getIdentity())) {
 					state.setRoomId((String) message.get("roomid"));
+					this.frame.getTextOut().append("You move the new roomid successfully\r\n");
+					//更新当前用户所在的房间
+					this.frame.getCurrentRoom().setText((String) message.get("roomid"));
 				}
 				
-				System.out.println(message.get("identity") + " moves from " + message.get("former") + " to "
-						+ message.get("roomid"));
-				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
+				//在文本显示窗口提示“XXX移动到某房间”
+				this.frame.getTextOut().append(message.get("identity") + " has moved to " + message.get("roomid")+"\r\n");				
 			}
 			return;
 		}

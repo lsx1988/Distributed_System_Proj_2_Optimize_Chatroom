@@ -1,4 +1,6 @@
 package au.edu.unimelb.tcp.client;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -16,13 +18,19 @@ public class MessageSendThread implements Runnable {
 
 	private boolean debug;
 	
-	// reading from console
-	private Scanner cmdin = new Scanner(System.in);
+	private Window frame;
+	
+	private String msg;
+	
+	private boolean wait;
 
-	public MessageSendThread(SSLSocket socket, State state, boolean debug) throws IOException {
+	public MessageSendThread(SSLSocket socket, State state, boolean debug, Window frame) throws IOException {
 		this.socket = socket;
 		this.state = state;
 		this.debug = debug;
+		this.frame = frame;
+		this.msg = null;
+		this.wait = true;
 		out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));		
 	}
 
@@ -38,12 +46,26 @@ public class MessageSendThread implements Runnable {
 		}
 		
 		while (true) {
-			String msg = cmdin.nextLine();
-			System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			try {
+				while(wait){
+					this.frame.getQuitButtton().addActionListener(new ActionListener() {
+						public void actionPerformed(ActionEvent e) {
+							msg = "#quit";
+							wait = false;
+						}
+					});
+					this.frame.getRefreshRoomButtton().addActionListener(new ActionListener() {
+						public void actionPerformed(ActionEvent e) {
+							msg = "#list";
+							wait = false;
+						}
+					});
+				}
 				MessageSend(socket, msg);
+				//wait = true;
 			} catch (IOException e) {
 				System.out.println("Communication Error: " + e.getMessage());
+				System.out.println("the button is wrong");
 				System.exit(1);
 			}
 		}
