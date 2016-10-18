@@ -85,9 +85,10 @@ public class MessageSendThread implements Runnable {
 			else if(array[0].startsWith("#quit")) {
 				sendToServer = ClientMessages.getQuitRequest();
 				send(sendToServer);
+				socket.shutdownOutput();
 				out.close();
 				run=false;
-				//socket.close();
+				socket.close();
 				
 			}
 			else if(array[0].startsWith("#who")) {

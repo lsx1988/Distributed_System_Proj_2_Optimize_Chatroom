@@ -41,7 +41,8 @@ public class MessageReceiveThread implements Runnable {
 		this.debug = debug;
 		this.frame = frame;
 		this.messageSendThread = messageSendThread;	
-		this.messageQueue = messageQueue;	
+		this.messageQueue = messageQueue;
+		this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 	}
 
 	@Override
@@ -146,8 +147,9 @@ public class MessageReceiveThread implements Runnable {
 					in.close();
 					//直接关闭窗口，退出程序
 					//System.exit(1);
-					socket.close();
+					socket.shutdownInput();
 					this.run = false;
+					socket.close();
 				//若是其他用户退出
 				} else {
 					//在文本面板上提示用户是谁退出了
@@ -252,8 +254,6 @@ public class MessageReceiveThread implements Runnable {
 				System.out.print("[" + state.getRoomId() + "] " + state.getIdentity() + "> ");
 			}
 			
-			System.setProperty("javax.net.ssl.trustStore", "C:\\Users\\liush\\Documents\\GitHub_Root\\DS_Proj_2_Optimize_Chatroom\\mykeystore");
-			this.sslsocketfactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
 			SSLSocket temp_socket = (SSLSocket) sslsocketfactory.createSocket(host, port);
 			
 			// send #movejoin
