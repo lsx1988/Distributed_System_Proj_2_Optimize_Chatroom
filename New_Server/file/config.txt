@@ -1,2 +1,2 @@
-s1	Localhost	4444	5555	6665
-s2	Localhost	4445	5556	6667
+s1	Localhost	4444	5555
+s2	Localhost	4445	5556

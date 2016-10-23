@@ -1,3 +1,3 @@
-aaa	aaa	admin
-bbb	bbb	normal
-ccc	ccc	admin
+aaa	aaa
+bbb	bbb
+ccc	ccc

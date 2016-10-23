@@ -9,8 +9,7 @@ public class ConfigReader {
 	
 	private  InetAddress serverIP;
 	private  int clientPort;
-	private  int serverPort;
-	private  int heartbeatPort;
+	private  int serverPort;;
 	private  ServerDatabase ds = ServerDatabase.getInstance();
 	private  ArrayList<String[]> temp = new ArrayList<String[]>();
 
@@ -24,10 +23,6 @@ public class ConfigReader {
 
 	public int getServerPort() {
 		return serverPort;
-	}
-	
-	public int getHearbeatPort(){
-		return heartbeatPort;
 	}
 	
 	public ArrayList<String[]> getInfo(){
@@ -54,12 +49,10 @@ public class ConfigReader {
 					this.serverIP = InetAddress.getByName(info[1]);
 					this.clientPort = Integer.parseInt(info[2]);
 					this.serverPort = Integer.parseInt(info[3]);
-					this.heartbeatPort = Integer.parseInt(info[4]);
 					//System.out.println(heartbeatPort);
 					
 				}else{
 					ds.addServer(info);
-					//new HeartBeatThread(info).start();
 					temp.add(info);
 				}
 				
@@ -71,7 +64,7 @@ public class ConfigReader {
 				while((str=br_user.readLine())!=null){
 					//split the string by tab
 					String[] info_2=str.split("\t");
-					ds.addUser(info_2[0],info_2[1],info_2[2]);
+					ds.addUser(info_2[0],info_2[1]);
 				}
 			}
 		} catch (IOException e) {

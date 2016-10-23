@@ -118,6 +118,7 @@ public class Window extends JFrame {
 		button_connect.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent e){
 				
+				button_connect.setEnabled(false);
 				String hostname = textarea_serverIP.getText();
 				String identity = textarea_identity.getText();
 				int port = Integer.parseInt(textarea_port.getText());

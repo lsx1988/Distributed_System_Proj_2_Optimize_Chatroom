@@ -7,7 +7,7 @@ import javax.net.ssl.SSLServerSocketFactory;
 public class Server {
 
 	public static String serverID, Configpath,userFilePath;
-	public static int client_port,server_port,heartbeat_port;
+	public static int client_port,server_port;
 	public static InetAddress server_IP;
 		
 	@SuppressWarnings("resource")
@@ -41,7 +41,6 @@ public class Server {
 		
 		client_port=configReader.getClientPort();
 		server_port = configReader.getServerPort();
-		heartbeat_port = configReader.getHearbeatPort();
 		server_IP = configReader.getServerIP();
 
 	
@@ -61,9 +60,7 @@ public class Server {
 			
 			//Create SSL server socket for server port
 			SSLServerSocket server_server = (SSLServerSocket) sslserversocketfactory
-					.createServerSocket(server_port,50, server_IP);
-			
-			System.out.println(heartbeat_port);
+					.createServerSocket(server_port,50, server_IP);			
 
 			//Listening to client port thread
 			new ListenToClient(server_client).start();

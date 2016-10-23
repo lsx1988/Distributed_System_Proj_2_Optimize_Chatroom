@@ -62,7 +62,6 @@ public class ServerConnection extends Thread {
 					serverinfo[1] = (String)jsOb_serverInfo.get("serverIP");
 					serverinfo[2] = (String)jsOb_serverInfo.get("client_port");
 					serverinfo[3] = (String)jsOb_serverInfo.get("server_port");
-					serverinfo[4] = (String)jsOb_serverInfo.get("heartbeat_port");
 							
 					new HeartBeatThread(serverinfo).start();
 					

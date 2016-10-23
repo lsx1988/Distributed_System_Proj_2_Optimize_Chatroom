@@ -32,7 +32,6 @@ public class HeartBeatThread extends Thread {
 		jsOb.put("serverIP", Server.server_IP.getHostName());
 		jsOb.put("client_port", Integer.toString(Server.client_port));
 		jsOb.put("server_port", Integer.toString(Server.server_port));
-		jsOb.put("heartbeat_port", Integer.toString(Server.heartbeat_port));
 		jsOb.put("online", false);
 		message.put("serverInfo", jsOb.toJSONString());
 		String msg = message.toJSONString();

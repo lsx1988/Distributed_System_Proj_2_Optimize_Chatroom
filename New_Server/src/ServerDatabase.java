@@ -36,7 +36,7 @@ public class ServerDatabase {
 	private Map<String, JSONObject> serverInfo;
 	
 	//Recording the approved user info
-	private Map<String,Map<String,String>> approvedUserInfo;
+	private Map<String,String> approvedUserInfo;
 	
 	//The locking list of identity, indexed by serverID
 	private ArrayList<JSONObject> identityLock;
@@ -62,7 +62,7 @@ public class ServerDatabase {
 		identityLock = new ArrayList<JSONObject>();
 		roomidLock = new ArrayList<JSONObject>();
 		usernameLock = new ArrayList<JSONObject>();
-		approvedUserInfo = new HashMap<String,Map<String,String>>();
+		approvedUserInfo = new HashMap<String,String>();
 	}
 	
 	//Get the unique and same instance of class
@@ -73,24 +73,17 @@ public class ServerDatabase {
 	/*-------------Method used for handling the approved user Info------------*/
 	
 	//add approved user info to list
-	public void addUser(String username,String password, String right){
-		Map<String,String> temp = new HashMap<String,String>();
-		temp.put(password, right);
-		approvedUserInfo.put(username, temp);
+	public void addUser(String username,String password){
+		approvedUserInfo.put(username, password);
 	}
 	
 	//check if the username and password is matching
 	public boolean isUsernameAndPasswordMatch(String username,String password){
-		if(approvedUserInfo.containsKey(username) && approvedUserInfo.get(username).containsKey(password)){
+		if(approvedUserInfo.get(username).equals(password)){
 			return true;
 		}else{
 			return false;
 		}
-	}
-	
-	//return the right of a specific user
-	public String getUserRight(String username, String password){
-		return approvedUserInfo.get(username).get(password);
 	}
 		
 	/*-------------Method used for handling the serverInfo------------*/
@@ -106,13 +99,11 @@ public class ServerDatabase {
 		String serverIP = serverConfig[1];
 		int client_port = Integer.parseInt(serverConfig[2]);
 		int server_port = Integer.parseInt(serverConfig[3]);
-		int heartbeat_port = Integer.parseInt(serverConfig[4]);
 		boolean online = true;
 		JSONObject jsOb = new JSONObject();	
 		jsOb.put("serverIP", serverIP);
 		jsOb.put("client_port", client_port);
 		jsOb.put("server_port", server_port);
-		jsOb.put("heartbeat_port", heartbeat_port);
 		jsOb.put("online", online);
 		this.serverInfo.put(serverid, jsOb);
 	}
@@ -176,7 +167,6 @@ public class ServerDatabase {
 		jsOb.put("identity",null);
 		jsOb.put("username", username);
 		jsOb.put("password",password);
-		jsOb.put("right",this.getUserRight(username, password));
 		this.userInfo.put(socket, jsOb);
 	}
 	
